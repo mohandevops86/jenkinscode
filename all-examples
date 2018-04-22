@@ -1,0 +1,121 @@
+node('master') {
+    stage('one') {
+        sh 'echo Hello World'
+    }
+    stage('two') {
+        sh 'echo Stage2'
+    }
+}
+
+
+-----------
+node('master') {
+    stage('one') {
+        def x='10'
+        sh "echo $x >/tmp/tvar"
+        script {
+            // y = sh(returnStdout: true, script: "echo ${x}")
+               y = readFile('/tmp/tvar').trim() 
+        }
+        
+        echo "${x}"
+    }
+    stage('two') {
+        sh 'echo Stage2'
+        echo "${y}"
+    }
+}
+
+------------------
+
+node('master') {
+    stage('one') {
+        def x='10'
+        sh "echo $x >/tmp/tvar"
+        script {
+            // y = sh(returnStdout: true, script: "echo ${x}")
+               y = readFile('/tmp/tvar').trim() 
+        }
+        
+        echo "${x}"
+    }
+    
+}
+
+node('jenkins-slave-for-maven') {
+    stage('two') {
+        sh 'echo Stage2'
+        echo "${y}"
+    }
+
+}
+
+---------------
+node('master') {
+    stage('one') {
+        git 'https://github.com/cit-latex/terraform.git'
+        sh "pwd && ls"
+        stash 'code'
+    }
+node('jenkins-slave-for-maven') {
+    stage('two') {
+        git 'https://github.com/cit-latex/docker.git'
+        unstash 'code'
+        sh "pwd && ls"
+    }
+    }
+}
+
+
+------------
+
+node('jenkins-slave-for-maven') {
+    stage('compile')  {
+    git 'https://github.com/cit-latex/t1-student-maven-proj.git'
+    sh 'mvn compile package'
+    }
+
+    stage('Upload Artifacts') {
+        sh 'mvn deploy -Drepoid=deployment -Drepouser=admin -Drepopwd=admin123'
+    }
+}
+
+node('master') {
+        stage('Get URL') {
+        sh "ls /var/lib/jenkins/jobs/code2-cicd/builds/$BUILD_ID/"
+        sh "cat /var/lib/jenkins/jobs/code2-cicd/builds/$BUILD_ID/log | grep Uploading | grep war | awk '{print \$2}' >/tmp/url"
+         script {
+            DEPLOY_URL = readFile('/tmp/url').trim() 
+        }
+    }
+}
+
+node('ansibeserver') {
+    stage('DEPLOY') {
+        sh "echo DEPLOY_URL: ${DEPLOY_URL} >/tmp/vars.yml"
+        sh '''
+            cd /home/ec2-user/ansible 
+            ansible-playbook deploy.yml
+        '''
+    }
+}
+
+------------
+node('master') {
+    stage('one') {
+        sh "echo Hello"
+    }
+    
+ 
+    stage('two') {
+        try { 
+            sh "lsss"
+        } catch (command) {
+            sh "echo Hello"
+        }
+    }
+ 
+    stage('three') {
+        sh "echo Hello"
+    }
+}
